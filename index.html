@@ -108,11 +108,11 @@ body{
 .op-text{color:rgba(255,255,255,.5);font-size:1rem;}
 
 /* 字字珠璣 */
-.pearl-row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:8px;}
-.pearl-chip{background:var(--purple);padding:10px 14px;border-radius:8px;
-  font-size:1.3rem;font-weight:700;}
-.pearl-answer-slot{background:var(--accent);color:#1a1000;padding:10px 14px;
-  border-radius:8px;font-size:1.3rem;font-weight:700;}
+.pearl-row{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:10px;}
+.pair-chip{display:inline-flex;align-items:stretch;border-radius:10px;
+  overflow:hidden;font-size:1.4rem;font-weight:700;}
+.pair-hint{background:var(--purple);color:#fff;padding:12px 16px;}
+.pair-ans{background:var(--accent);color:#1a1000;padding:12px 16px;}
 
 /* 字有發揮 */
 .position-row{display:flex;gap:8px;justify-content:center;margin-top:8px;}
@@ -484,27 +484,28 @@ const QS = [
  note:'各寫一個含「大」和含「阝」的字\n例：奢/都、奈/祁、奎/郵',
  ans:['（見說明）'],desc:'請各寫出一個含有「大」和含有「阝」的字'},
 // ── 字字珠璣 ──
-{type:'pearl',hints:['分','見','交'],t:40,maxPts:1,
+// hintPos: 'before'=提示字在前（提示＋答案），'after'=答案在前（答案＋提示）
+{type:'pearl',hints:['分','見','交'],hintPos:['after','after','after'],t:40,maxPts:1,
  note:'成（成分、成見、成交）',ans:['成'],desc:'寫出一個字能與所有提示字各組成詞語'},
-{type:'pearl',hints:['對','冒','通','供'],t:40,maxPts:1,
+{type:'pearl',hints:['對','冒','通','供'],hintPos:['before','before','before','before'],t:40,maxPts:1,
  note:'稱（對稱、冒稱、通稱、供稱）',ans:['稱'],desc:'寫出一個字能與所有提示字各組成詞語'},
-{type:'pearl',hints:['人','跑','力','上'],t:40,maxPts:1,
+{type:'pearl',hints:['人','跑','力','上'],hintPos:['before','after','after','after'],t:40,maxPts:1,
  note:'馬（人馬、馬跑、馬力、馬上）',ans:['馬'],desc:'寫出一個字能與所有提示字各組成詞語'},
-{type:'pearl',hints:['莫','會','定'],t:40,maxPts:1,
+{type:'pearl',hints:['莫','會','定'],hintPos:['after','after','after'],t:40,maxPts:1,
  note:'約（約莫、約會、約定）',ans:['約'],desc:'寫出一個字能與所有提示字各組成詞語'},
-{type:'pearl',hints:['子','反','亂'],t:40,maxPts:1,
+{type:'pearl',hints:['子','反','亂'],hintPos:['before','before','before'],t:40,maxPts:1,
  note:'彈（子彈、反彈、亂彈）',ans:['彈'],desc:'寫出一個字能與所有提示字各組成詞語'},
-{type:'pearl',hints:['包','氣','發'],t:40,maxPts:1,
+{type:'pearl',hints:['包','氣','發'],hintPos:['after','after','after'],t:40,maxPts:1,
  note:'打（打包、打氣、打發）',ans:['打'],desc:'寫出一個字能與所有提示字各組成詞語'},
-{type:'pearl',hints:['頭','話','班','曲'],t:40,maxPts:1,
+{type:'pearl',hints:['頭','話','班','曲'],hintPos:['after','after','after','after'],t:40,maxPts:1,
  note:'插（插頭、插話、插班、插曲）',ans:['插'],desc:'寫出一個字能與所有提示字各組成詞語'},
-{type:'pearl',hints:['機','生','身','向'],t:40,maxPts:1,
+{type:'pearl',hints:['機','生','身','向'],hintPos:['before','before','after','after'],t:40,maxPts:1,
  note:'動（機動、生動、動身、動向）',ans:['動'],desc:'寫出一個字能與所有提示字各組成詞語'},
-{type:'pearl',hints:['坦','機','倍'],t:40,maxPts:1,
+{type:'pearl',hints:['坦','機','倍'],hintPos:['before','before','before'],t:40,maxPts:1,
  note:'率（坦率、機率、倍率）',ans:['率'],desc:'寫出一個字能與所有提示字各組成詞語'},
-{type:'pearl',hints:['稱','迷','墨','想'],t:40,maxPts:1,
+{type:'pearl',hints:['稱','迷','墨','想'],hintPos:['after','after','after','after'],t:40,maxPts:1,
  note:'著（著稱、著迷、著墨、著想）',ans:['著'],desc:'寫出一個字能與所有提示字各組成詞語'},
-{type:'pearl',hints:['球','訴','告'],t:40,maxPts:1,
+{type:'pearl',hints:['球','訴','告'],hintPos:['after','after','after'],t:40,maxPts:1,
  note:'控或投（控球/投球、控訴/投訴、控告/投告）',ans:['控','投'],
  desc:'寫出一個字能與所有提示字各組成詞語'},
 // ── 似是而非 ──
@@ -733,11 +734,15 @@ function renderQ(q){
           style="width:100%;border-radius:10px;margin-top:8px;display:block;"
           loading="eager">`;
   } else if(q.type==='pearl'){
+    const pairs=q.hints.map((ch,i)=>{
+      // hintPos[i]==='before' 表示提示字在答案之前（提示＋答案）
+      const before=q.hintPos&&q.hintPos[i]==='before';
+      return before
+        ?`<div class="pair-chip"><span class="pair-hint">${ch}</span><span class="pair-ans">？</span></div>`
+        :`<div class="pair-chip"><span class="pair-ans">？</span><span class="pair-hint">${ch}</span></div>`;
+    }).join('');
     h+=`<div class="desc-text">${q.desc}</div>
-        <div class="pearl-row">
-          <span class="pearl-answer-slot">？</span>
-          ${q.hints.map(c=>`<span class="pearl-chip">${c}</span>`).join('')}
-        </div>`;
+        <div class="pearl-row">${pairs}</div>`;
   } else if(q.type==='wrongchar'){
     const sent=q.sentence.replace(/「([^」]*)」/g,
       (_,c)=>`「<span class="wrong-hl">${c}</span>」`);
