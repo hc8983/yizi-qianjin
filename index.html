@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>一字千金 闖關遊戲</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0d0d2b;--card:#1a1a50;--accent:#f0c040;--purple:#9b5de5;
+  --green:#4caf50;--red:#f44336;--orange:#ff9800;--text:#fff;
+}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'PingFang TC','Heiti TC','Microsoft JhengHei',sans-serif;
+  background:var(--bg);color:var(--text);overflow-x:hidden;
+  /* 防止 iOS 雙擊縮放 */
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+}
+
+/* 畫題畫面以外：可捲動 */
+.screen{display:none;flex-direction:column;padding:16px;
+  min-height:100dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.screen.active{display:flex;}
+
+/* 遊戲作答畫面：固定滿版，禁止整頁捲動 */
+#screen-game{
+  height:100dvh;overflow:hidden;padding:12px;
+  min-height:unset; /* 蓋掉 .screen */
+}
+
+/* ── BUTTONS ── */
+.btn{padding:16px 24px;border:none;border-radius:14px;font-size:1.05rem;font-weight:700;
+  cursor:pointer;transition:transform .1s,opacity .1s;width:100%;
+  -webkit-tap-highlight-color:transparent;}
+.btn:active{transform:scale(.96);}
+.btn-gold{background:var(--accent);color:#1a1000;}
+.btn-purple{background:var(--purple);color:#fff;}
+.btn-ghost{background:rgba(255,255,255,.1);color:#fff;}
+
+/* ── HOME ── */
+#screen-home{align-items:center;justify-content:center;gap:20px;}
+.home-title{font-size:3.2rem;font-weight:900;color:var(--accent);
+  text-shadow:0 0 30px rgba(240,192,64,.5);letter-spacing:.1em;}
+.home-sub{color:rgba(255,255,255,.5);font-size:.95rem;margin-top:-12px;}
+.home-btns{width:100%;max-width:340px;display:flex;flex-direction:column;gap:14px;}
+
+/* ── SETUP ── */
+#screen-setup{gap:14px;}
+.setup-title{font-size:1.4rem;font-weight:700;text-align:center;margin-bottom:4px;}
+.field-label{font-size:.85rem;color:rgba(255,255,255,.6);margin-bottom:6px;}
+.field-input{width:100%;padding:14px;border-radius:10px;
+  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);
+  color:#fff;font-size:1rem;-webkit-appearance:none;}
+.field-input option{background:#1a1a50;}
+.player-input-row{margin-bottom:10px;}
+
+/* ── SETTINGS ── */
+#screen-settings{gap:10px;}
+.toggle-row{display:flex;align-items:center;gap:12px;padding:14px;
+  background:rgba(255,255,255,.08);border-radius:10px;cursor:pointer;
+  min-height:52px; /* 觸控區域 */}
+.toggle{width:44px;height:26px;background:#444;border-radius:13px;
+  position:relative;transition:background .2s;flex-shrink:0;}
+.toggle::after{content:'';position:absolute;width:22px;height:22px;
+  background:#fff;border-radius:50%;top:2px;left:2px;transition:left .2s;}
+.toggle.on{background:var(--green);}
+.toggle.on::after{left:20px;}
+
+/* ── GAME ── */
+.game-topbar{display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:8px;flex-shrink:0;}
+.q-counter{font-size:.85rem;color:rgba(255,255,255,.5);}
+.score-chip{font-size:.85rem;color:rgba(255,255,255,.5);}
+
+/* 計時器 */
+.timer-wrap{position:relative;width:60px;height:60px;flex-shrink:0;}
+.timer-wrap svg{transform:rotate(-90deg);}
+.timer-num{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  font-size:1.2rem;font-weight:700;}
+
+/* 題目卡 */
+.q-card{background:var(--card);border-radius:14px;padding:14px;
+  margin-bottom:8px;flex-shrink:0;
+  max-height:38dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.type-badge{display:inline-block;background:var(--purple);padding:4px 12px;
+  border-radius:20px;font-size:.8rem;margin-bottom:8px;}
+.big-char{font-size:4.5rem;font-weight:900;color:var(--accent);text-align:center;
+  line-height:1.1;}
+.hint-text{text-align:center;color:rgba(255,255,255,.65);font-size:1rem;margin-top:4px;}
+.desc-text{color:rgba(255,255,255,.75);font-size:.9rem;margin-top:6px;}
+
+/* 成語格 */
+.idiom-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;}
+.idiom-cell{aspect-ratio:1;border-radius:8px;display:flex;align-items:center;
+  justify-content:center;font-size:2rem;font-weight:900;}
+.cell-show{background:rgba(255,255,255,.15);color:var(--accent);}
+.cell-hide{background:rgba(255,255,255,.04);border:2px dashed rgba(255,255,255,.2);
+  color:rgba(255,255,255,.2);}
+
+/* 團結一詞 */
+.components-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;
+  justify-content:center;margin-top:8px;}
+.comp-chip{background:var(--purple);padding:8px 12px;border-radius:8px;
+  font-size:1.3rem;font-weight:700;}
+.op-text{color:rgba(255,255,255,.5);font-size:1rem;}
+
+/* 字字珠璣 */
+.pearl-row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:8px;}
+.pearl-chip{background:var(--purple);padding:10px 14px;border-radius:8px;
+  font-size:1.3rem;font-weight:700;}
+.pearl-answer-slot{background:var(--accent);color:#1a1000;padding:10px 14px;
+  border-radius:8px;font-size:1.3rem;font-weight:700;}
+
+/* 字有發揮 */
+.position-row{display:flex;gap:8px;justify-content:center;margin-top:8px;}
+.pos-box{width:56px;height:56px;border-radius:8px;display:flex;align-items:center;
+  justify-content:center;font-size:1.4rem;font-weight:700;}
+.pos-target{background:var(--accent);color:#1a1000;}
+.pos-empty{background:rgba(255,255,255,.1);border:2px dashed rgba(255,255,255,.3);
+  color:rgba(255,255,255,.3);font-size:1.1rem;}
+
+/* 一字雙標 */
+.dual-col{display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:8px;}
+.dual-box{background:rgba(255,255,255,.12);border-radius:10px;padding:12px 32px;
+  font-size:2.5rem;font-weight:900;color:var(--accent);}
+
+/* 似是而非 */
+.sentence{font-size:1.05rem;line-height:2.1;text-align:center;margin-top:6px;}
+.wrong-hl{color:var(--accent);text-decoration:underline;font-weight:700;}
+
+/* 一字雲宇宙 */
+.choice-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:8px;}
+.choice-btn{background:rgba(255,255,255,.12);border:2px solid transparent;
+  border-radius:10px;padding:14px 18px;font-size:1.8rem;color:#fff;cursor:pointer;
+  transition:all .15s;font-family:inherit;min-width:56px;min-height:56px;}
+.choice-btn.selected{border-color:var(--accent);background:rgba(240,192,64,.2);}
+.choice-all-ok{width:100%;margin-top:8px;padding:14px;background:rgba(255,255,255,.08);
+  border:2px solid rgba(255,255,255,.2);border-radius:10px;color:#fff;font-size:1rem;
+  cursor:pointer;font-family:inherit;transition:all .15s;min-height:52px;}
+.choice-all-ok.selected{border-color:var(--green);background:rgba(76,175,80,.2);}
+
+/* ── 手寫板 ── */
+.canvas-area{
+  flex:1;display:flex;flex-direction:column;
+  min-height:0; /* 讓 flex 子項可縮小 */
+  gap:6px;
+}
+.canvas-toolbar{
+  display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
+.canvas-label{font-size:.8rem;color:rgba(255,255,255,.4);}
+.canvas-btns{display:flex;align-items:center;gap:6px;}
+.canvas-btn{
+  background:rgba(255,255,255,.1);border:none;color:#fff;
+  padding:8px 14px;border-radius:8px;cursor:pointer;
+  font-size:.9rem;font-family:inherit;min-height:40px;
+  -webkit-tap-highlight-color:transparent;}
+.pen-colors{display:flex;gap:8px;margin-left:6px;}
+.pen-dot{
+  width:32px;height:32px;border-radius:50%;cursor:pointer;
+  border:3px solid transparent;transition:border .1s;
+  -webkit-tap-highlight-color:transparent;}
+.pen-dot.active{border-color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.3);}
+#drawing-canvas{
+  flex:1;min-height:120px;width:100%;
+  border-radius:12px;touch-action:none;cursor:crosshair;
+  display:block;background:#fff;}
+
+/* 底部控制 */
+.game-controls{display:flex;gap:10px;flex-shrink:0;}
+.game-controls .btn{padding:18px 24px;font-size:1.05rem;}
+
+/* ── ANSWER ── */
+#screen-answer{gap:12px;padding-bottom:24px;}
+.ans-title{font-size:1.3rem;font-weight:700;color:var(--accent);text-align:center;}
+.ans-card{background:var(--card);border-radius:14px;padding:16px;}
+.ans-note{color:var(--accent);font-size:1rem;margin-bottom:10px;font-weight:600;}
+.ans-chips{display:flex;flex-wrap:wrap;gap:6px;}
+.ans-chip{background:var(--accent);color:#1a1000;padding:8px 14px;border-radius:8px;
+  font-size:1.2rem;font-weight:700;}
+.scoring-label{font-size:.9rem;color:rgba(255,255,255,.6);margin-bottom:8px;}
+.player-score-row{
+  display:flex;align-items:center;flex-wrap:wrap;
+  padding:12px;background:rgba(255,255,255,.07);
+  border-radius:10px;margin-bottom:8px;gap:8px;}
+.psr-name{font-weight:600;max-width:35%;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;}
+.psr-btns{display:flex;gap:6px;}
+.score-btn{
+  border:none;border-radius:8px;padding:12px 18px;
+  font-size:1rem;font-weight:700;cursor:pointer;
+  font-family:inherit;min-height:48px;
+  -webkit-tap-highlight-color:transparent;}
+.sbtn-ok{background:var(--green);color:#fff;}
+.sbtn-no{background:var(--red);color:#fff;}
+.partial-row{display:flex;gap:6px;flex-wrap:wrap;}
+.partial-btn{
+  border:none;border-radius:8px;padding:10px 16px;font-size:1rem;
+  font-weight:700;cursor:pointer;font-family:inherit;
+  background:rgba(255,255,255,.15);color:#fff;
+  min-height:48px;min-width:48px;
+  -webkit-tap-highlight-color:transparent;}
+.partial-btn.active{background:var(--accent);color:#1a1000;}
+
+/* ── SCORE ── */
+#screen-score{align-items:center;gap:16px;padding:20px 16px;}
+.final-title{font-size:1.8rem;font-weight:900;color:var(--accent);}
+.lb-item{display:flex;align-items:center;padding:14px 16px;background:var(--card);
+  border-radius:12px;width:100%;max-width:400px;gap:12px;}
+.lb-rank{font-size:1.8rem;}
+.lb-name{flex:1;font-size:1.1rem;font-weight:600;}
+.lb-pts{font-size:1.4rem;font-weight:700;color:var(--accent);}
+
+/* ── 小螢幕調整 (< 390px) ── */
+@media(max-width:390px){
+  .big-char{font-size:3.8rem;}
+  .home-title{font-size:2.6rem;}
+  .timer-wrap{width:52px;height:52px;}
+  .timer-num{font-size:1.1rem;}
+  .dual-box{font-size:2rem;padding:10px 24px;}
+  .comp-chip{font-size:1.1rem;padding:6px 10px;}
+  .pearl-chip,.pearl-answer-slot{font-size:1.1rem;padding:8px 12px;}
+  .game-controls .btn{padding:16px 12px;font-size:.95rem;}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ HOME ═══════════ -->
+<div id="screen-home" class="screen">
+  <h1 class="home-title">一字千金</h1>
+  <p class="home-sub">文字闖關遊戲</p>
+  <div class="home-btns">
+    <button class="btn btn-gold" onclick="startSolo()">練習模式（單人）</button>
+    <button class="btn btn-purple" onclick="gotoSetup()">多人模式</button>
+    <button class="btn btn-ghost" onclick="gotoSettings()">⚙ 選擇題型</button>
+  </div>
+</div>
+
+<!-- ═══════════ SETUP ═══════════ -->
+<div id="screen-setup" class="screen">
+  <div class="setup-title">多人模式設定</div>
+  <div class="field-label">玩家人數</div>
+  <select id="player-count" class="field-input" onchange="buildPlayerInputs()">
+    <option value="2">2 人</option><option value="3">3 人</option>
+    <option value="4">4 人</option><option value="5">5 人</option>
+    <option value="6">6 人</option>
+  </select>
+  <div id="player-inputs"></div>
+  <div class="field-label" style="margin-top:12px;">每輪題數</div>
+  <select id="q-count" class="field-input">
+    <option value="5">5 題</option><option value="10" selected>10 題</option>
+    <option value="15">15 題</option><option value="20">20 題</option>
+    <option value="999">全部</option>
+  </select>
+  <div style="display:flex;gap:10px;margin-top:16px;">
+    <button class="btn btn-ghost" style="flex:.4" onclick="show('screen-home')">返回</button>
+    <button class="btn btn-gold" style="flex:1" onclick="startMulti()">開始遊戲</button>
+  </div>
+</div>
+
+<!-- ═══════════ SETTINGS ═══════════ -->
+<div id="screen-settings" class="screen">
+  <div class="setup-title" style="margin-bottom:8px;">選擇題型</div>
+  <div id="type-list"></div>
+  <button class="btn btn-gold" style="margin-top:16px;" onclick="show('screen-home')">確定</button>
+</div>
+
+<!-- ═══════════ GAME ═══════════ -->
+<div id="screen-game" class="screen">
+  <div class="game-topbar">
+    <span class="q-counter" id="q-counter">題目 1/10</span>
+    <div class="timer-wrap">
+      <svg width="68" height="68" viewBox="0 0 68 68">
+        <circle cx="34" cy="34" r="28" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="5"/>
+        <circle id="timer-ring" cx="34" cy="34" r="28" fill="none" stroke="var(--accent)"
+          stroke-width="5" stroke-linecap="round"
+          stroke-dasharray="176" stroke-dashoffset="0"/>
+      </svg>
+      <div class="timer-num" id="timer-num">40</div>
+    </div>
+    <span class="score-chip" id="solo-score"></span>
+  </div>
+
+  <div class="q-card" id="q-display"></div>
+
+  <div class="canvas-area">
+    <div class="canvas-toolbar">
+      <span class="canvas-label">書寫答案</span>
+      <div class="canvas-btns">
+        <div class="pen-colors">
+          <div class="pen-dot active" style="background:#222" onclick="setPen('#222',this)"></div>
+          <div class="pen-dot" style="background:#c00" onclick="setPen('#c00',this)"></div>
+          <div class="pen-dot" style="background:#00c" onclick="setPen('#00c',this)"></div>
+        </div>
+        <button class="canvas-btn" onclick="undoStroke()">↩</button>
+        <button class="canvas-btn" onclick="clearCanvas()">✕</button>
+      </div>
+    </div>
+    <canvas id="drawing-canvas"></canvas>
+  </div>
+
+  <div class="game-controls">
+    <button class="btn btn-ghost" style="flex:.4" onclick="skipQ()">跳過</button>
+    <button class="btn btn-gold" style="flex:1" onclick="doReveal()">揭示答案</button>
+  </div>
+</div>
+
+<!-- ═══════════ ANSWER ═══════════ -->
+<div id="screen-answer" class="screen">
+  <div class="ans-title">✦ 正確答案 ✦</div>
+  <div class="ans-card" id="ans-display"></div>
+  <div>
+    <div class="scoring-label">各玩家計分</div>
+    <div id="player-scoring"></div>
+  </div>
+  <button class="btn btn-gold" onclick="nextQ()">下一題 →</button>
+</div>
+
+<!-- ═══════════ SCORE ═══════════ -->
+<div id="screen-score" class="screen">
+  <div class="final-title">🎉 遊戲結束！</div>
+  <div id="leaderboard" style="width:100%;display:flex;flex-direction:column;gap:8px;align-items:center;"></div>
+  <div style="width:100%;max-width:360px;display:flex;flex-direction:column;gap:10px;">
+    <button class="btn btn-gold" onclick="restartGame()">再玩一次</button>
+    <button class="btn btn-ghost" onclick="show('screen-home')">回主頁</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+// QUESTION TYPES
+// ═══════════════════════════════════════
+const TYPES = {
+  pronunciation:'有字一同・讀音',
+  radical:'有字一同・部首',
+  strokes:'有字一同・筆畫',
+  combine:'團結一詞',
+  idiom:'見微字著',
+  compound:'洞築機先',
+  dual:'一字雙標',
+  pearl:'字字珠璣',
+  wrongchar:'似是而非',
+  component:'東拼西湊',
+  position:'字有發揮',
+  online:'一字雲宇宙',
+};
+
+// maxPts: scoring buttons; 1=✓✗, 4=0~4, etc.
+const QS = [
+// ── 有字一同・讀音 ──
+{type:'pronunciation',ch:'悼',hint:'ㄉㄠˋ',t:40,maxPts:4,
+ note:'讀音 ㄉㄠˋ 的字',ans:['道','到','導','盜','稻','倒','禱','燾'],
+ desc:'請寫出與「悼」讀音相同的四個字'},
+{type:'pronunciation',ch:'幃',hint:'ㄨㄟˊ',t:40,maxPts:4,
+ note:'讀音 ㄨㄟˊ 的字',ans:['維','唯','惟','圍','違','威','為','遺'],
+ desc:'請寫出與「幃」讀音相同的四個字'},
+{type:'pronunciation',ch:'貨',hint:'ㄏㄨㄛˋ',t:40,maxPts:4,
+ note:'讀音 ㄏㄨㄛˋ 的字',ans:['禍','惑','或','獲','霍'],
+ desc:'請寫出與「貨」讀音相同的四個字'},
+{type:'pronunciation',ch:'貽',hint:'ㄧˊ',t:40,maxPts:4,
+ note:'讀音 ㄧˊ 的字',ans:['移','怡','夷','姨','宜','儀','疑','遺'],
+ desc:'請寫出與「貽」讀音相同的四個字'},
+{type:'pronunciation',ch:'貢',hint:'ㄍㄨㄥˋ',t:40,maxPts:4,
+ note:'讀音 ㄍㄨㄥˋ 的字',ans:['共','供','拱','鞏'],
+ desc:'請寫出與「貢」讀音相同的四個字'},
+// ── 有字一同・部首 ──
+{type:'radical',ch:'賓',hint:'貝部',t:50,maxPts:4,
+ note:'部首「貝」的字',ans:['貸','販','貧','賀','賬','貴','財','貿','貼','貶','賭','費'],
+ desc:'請寫出與「賓」部首相同的四個字'},
+{type:'radical',ch:'計',hint:'言部',t:50,maxPts:4,
+ note:'部首「言」的字',ans:['謝','調','誠','語','詞','記','談','誡','試','許','話'],
+ desc:'請寫出與「計」部首相同的四個字'},
+{type:'radical',ch:'欣',hint:'欠部',t:50,maxPts:4,
+ note:'部首「欠」的字',ans:['欸','欲','歡','欺','款','歎','歌','次','欽'],
+ desc:'請寫出與「欣」部首相同的四個字'},
+// ── 有字一同・筆畫 ──
+{type:'strokes',ch:'凸',hint:'5 畫',t:60,maxPts:4,
+ note:'共 5 畫的字',ans:['民','引','本','世','玉','令','弘','矢','甲','白','目','田','由','用','冬'],
+ desc:'請寫出與「凸」筆畫相同的四個字'},
+{type:'strokes',ch:'乞',hint:'3 畫',t:60,maxPts:4,
+ note:'共 3 畫的字',ans:['下','上','千','子','大','才','川','口','山','土','女','己','工'],
+ desc:'請寫出與「乞」筆畫相同的四個字'},
+{type:'strokes',ch:'今',hint:'4 畫',t:60,maxPts:4,
+ note:'共 4 畫的字',ans:['水','牛','心','王','公','仁','日','月','中','文','火','木','止'],
+ desc:'請寫出與「今」筆畫相同的四個字'},
+// ── 團結一詞 ──
+{type:'combine',components:['束','攵','正','宀','谷'],t:40,maxPts:1,
+ note:'整容（束+攵=整，正+宀+谷=容）',ans:['整容'],
+ desc:'請用五個部件組合成一個二字詞'},
+{type:'combine',components:['言','尚','工','弋','旨'],t:40,maxPts:1,
+ note:'嘗試（尚+旨=嘗，工+弋+言=試）',ans:['嘗試'],
+ desc:'請用五個部件組合成一個二字詞'},
+{type:'combine',components:['見','七','立','刀','木'],t:40,maxPts:1,
+ note:'親切（立+木+見=親，七+刀=切）',ans:['親切'],
+ desc:'請用五個部件組合成一個二字詞'},
+{type:'combine',components:['一','木','里','日','不'],t:40,maxPts:1,
+ note:'量杯（日+一+里=量，木+不=杯）',ans:['量杯'],
+ desc:'請用五個部件組合成一個二字詞'},
+{type:'combine',components:['尸','彳','手','世','由'],t:40,maxPts:1,
+ note:'抽屜（手+由=抽，尸+世+彳=屜）',ans:['抽屜'],
+ desc:'請用五個部件組合成一個二字詞'},
+{type:'combine',components:['谷','羊','害','辶','土'],t:40,maxPts:1,
+ note:'豁達（害+谷=豁，土+羊+辶=達）',ans:['豁達'],
+ desc:'請用五個部件組合成一個二字詞'},
+{type:'combine',components:['寸','金','人','阜','彖'],t:40,maxPts:1,
+ note:'附錄（阜+人+寸=附，金+彖=錄）',ans:['附錄'],
+ desc:'請用五個部件組合成一個二字詞'},
+// ── 見微字著 ──
+{type:'idiom',cells:['汗','牛','充','棟'],shown:[0,1,2,3],t:30,maxPts:1,
+ note:'汗牛充棟',ans:['汗牛充棟'],
+ desc:'請依提示寫出正確的四字成語'},
+{type:'idiom',cells:['負','荊','請','罪'],shown:[0,3],t:30,maxPts:1,
+ note:'負荊請罪',ans:['負荊請罪'],
+ desc:'請依提示寫出正確的四字成語'},
+{type:'idiom',cells:['人','才','輩','出'],shown:[3],t:30,maxPts:1,
+ note:'人才輩出',ans:['人才輩出'],
+ desc:'請依提示寫出正確的四字成語'},
+{type:'idiom',cells:['斷','章','取','義'],shown:[0],t:20,maxPts:1,
+ note:'斷章取義',ans:['斷章取義'],
+ desc:'請依提示寫出正確的四字成語'},
+// ── 洞築機先 ──
+{type:'compound',hints:['全軍覆沒','當機立斷','含辛茹苦','伶牙俐齒','含沙射影'],t:40,maxPts:3,
+ note:'共三句成語（每句 1 分）：\n• 全軍覆沒\n• 當機立斷\n• 含辛茹苦\n• 伶牙俐齒\n• 含沙射影',
+ ans:['全軍覆沒','當機立斷','含辛茹苦','伶牙俐齒','含沙射影'],
+ desc:'請依題目提示構築合適的成語，共三回合'},
+{type:'compound',hints:['從善如流','肺腑之言','因陋就簡','廢寢忘食','孤注一擲'],t:40,maxPts:3,
+ note:'成語答案（每題 1 分）：\n• 從善如流\n• 肺腑之言\n• 因陋就簡\n• 廢寢忘食\n• 孤注一擲',
+ ans:['從善如流','肺腑之言','因陋就簡','廢寢忘食','孤注一擲'],
+ desc:'請依題目提示構築合適的成語'},
+{type:'compound',hints:['推陳出新','苦口婆心','無庸置疑','滿腹經綸','眾叛親離'],t:40,maxPts:3,
+ note:'成語答案（每題 1 分）：\n• 推陳出新\n• 苦口婆心\n• 無庸置疑\n• 滿腹經綸\n• 眾叛親離',
+ ans:['推陳出新','苦口婆心','無庸置疑','滿腹經綸','眾叛親離'],
+ desc:'請依題目提示構築合適的成語'},
+{type:'compound',hints:['天崩地裂','身敗名裂','聲名狼藉','循序漸進','齊頭並進'],t:40,maxPts:3,
+ note:'成語答案（每題 1 分）：\n• 天崩地裂\n• 身敗名裂\n• 聲名狼藉\n• 循序漸進\n• 齊頭並進',
+ ans:['天崩地裂','身敗名裂','聲名狼藉','循序漸進','齊頭並進'],
+ desc:'請依題目提示構築合適的成語'},
+// ── 一字雙標 ──
+{type:'dual',components:['糹','頁'],t:40,maxPts:1,
+ note:'各寫一個含「糹」和含「頁」的字\n例：經/頸、紅/項、緣/顏',
+ ans:['（見說明）'],desc:'請各寫出一個含有「糹」和含有「頁」的字'},
+{type:'dual',components:['女','艹'],t:20,maxPts:1,
+ note:'各寫一個含「女」和含「艹」的字\n例：姑/苦、妙/芳、婉/蕤',
+ ans:['（見說明）'],desc:'請各寫出一個含有「女」和含有「艹」的字'},
+{type:'dual',components:['才','羽'],t:40,maxPts:1,
+ note:'各寫一個含「才」和含「羽」的字\n例：播/翻、技/翔、拉/翎',
+ ans:['（見說明）'],desc:'請各寫出一個含有「才」和含有「羽」的字'},
+{type:'dual',components:['大','阝'],t:40,maxPts:1,
+ note:'各寫一個含「大」和含「阝」的字\n例：奢/都、奈/祁、奎/郵',
+ ans:['（見說明）'],desc:'請各寫出一個含有「大」和含有「阝」的字'},
+// ── 字字珠璣 ──
+{type:'pearl',hints:['分','見','交'],t:40,maxPts:1,
+ note:'成（成分、成見、成交）',ans:['成'],desc:'寫出一個字能與所有提示字各組成詞語'},
+{type:'pearl',hints:['對','冒','通','供'],t:40,maxPts:1,
+ note:'稱（對稱、冒稱、通稱、供稱）',ans:['稱'],desc:'寫出一個字能與所有提示字各組成詞語'},
+{type:'pearl',hints:['人','跑','力','上'],t:40,maxPts:1,
+ note:'馬（人馬、馬跑、馬力、馬上）',ans:['馬'],desc:'寫出一個字能與所有提示字各組成詞語'},
+{type:'pearl',hints:['莫','會','定'],t:40,maxPts:1,
+ note:'約（約莫、約會、約定）',ans:['約'],desc:'寫出一個字能與所有提示字各組成詞語'},
+{type:'pearl',hints:['子','反','亂'],t:40,maxPts:1,
+ note:'彈（子彈、反彈、亂彈）',ans:['彈'],desc:'寫出一個字能與所有提示字各組成詞語'},
+{type:'pearl',hints:['包','氣','發'],t:40,maxPts:1,
+ note:'打（打包、打氣、打發）',ans:['打'],desc:'寫出一個字能與所有提示字各組成詞語'},
+{type:'pearl',hints:['頭','話','班','曲'],t:40,maxPts:1,
+ note:'插（插頭、插話、插班、插曲）',ans:['插'],desc:'寫出一個字能與所有提示字各組成詞語'},
+{type:'pearl',hints:['機','生','身','向'],t:40,maxPts:1,
+ note:'動（機動、生動、動身、動向）',ans:['動'],desc:'寫出一個字能與所有提示字各組成詞語'},
+{type:'pearl',hints:['坦','機','倍'],t:40,maxPts:1,
+ note:'率（坦率、機率、倍率）',ans:['率'],desc:'寫出一個字能與所有提示字各組成詞語'},
+{type:'pearl',hints:['稱','迷','墨','想'],t:40,maxPts:1,
+ note:'著（著稱、著迷、著墨、著想）',ans:['著'],desc:'寫出一個字能與所有提示字各組成詞語'},
+{type:'pearl',hints:['球','訴','告'],t:40,maxPts:1,
+ note:'控或投（控球/投球、控訴/投訴、控告/投告）',ans:['控','投'],
+ desc:'寫出一個字能與所有提示字各組成詞語'},
+// ── 似是而非 ──
+{type:'wrongchar',
+ sentence:'他決定重頭開始，以德「抱」怨，從事公益，貢獻所學。',
+ wrong:['抱'],right:['報'],t:15,maxPts:1,
+ note:'「報」— 以德「報」怨（不是抱）',ans:['報'],
+ desc:'找出句中錯別字，寫出正確的字'},
+{type:'wrongchar',
+ sentence:'無論嫌犯如何老奸巨「滑」，都逃不過檢察官明「查」秋毫。',
+ wrong:['滑','查'],right:['猾','察'],t:15,maxPts:2,
+ note:'「猾」老奸巨猾、「察」明察秋毫',ans:['猾','察'],
+ desc:'找出句中錯別字，寫出正確的字'},
+{type:'wrongchar',
+ sentence:'大家一定要「刻」力齊心，不可以各行其「事」。',
+ wrong:['刻','事'],right:['戮','是'],t:15,maxPts:2,
+ note:'「戮」戮力齊心、「是」各行其是',ans:['戮','是'],
+ desc:'找出句中錯別字，寫出正確的字'},
+{type:'wrongchar',
+ sentence:'里長一向急「功」好義，遇到阮囊羞「啬」的人也不遺餘力幫忙。',
+ wrong:['功','啬'],right:['公','澀'],t:15,maxPts:2,
+ note:'「公」急公好義、「澀」阮囊羞澀',ans:['公','澀'],
+ desc:'找出句中錯別字，寫出正確的字'},
+{type:'wrongchar',
+ sentence:'個個百步穿「楊」，簡直是名「服」其實的神射手！',
+ wrong:['服'],right:['符'],t:15,maxPts:1,
+ note:'「符」名符其實（百步穿楊本身正確）',ans:['符'],
+ desc:'找出句中錯別字，寫出正確的字'},
+// ── 東拼西湊 ──
+{type:'component',comp:'日',t:30,maxPts:4,
+ note:'含「日」的字：昇、暘、昶、昏、明、旺、春、晴、昨、早、星、時、暗…',
+ ans:['昇','明','旺','春','晴','昨','早','星','暗'],
+ desc:'請寫出結構中含有「日」的字（越多越好）'},
+{type:'component',comp:'止',t:30,maxPts:4,
+ note:'含「止」的字：歲、此、歧、步、芷、正、歷、址、趾…',
+ ans:['歲','此','歧','步','芷','正','歷','址','趾'],
+ desc:'請寫出結構中含有「止」的字（越多越好）'},
+{type:'component',comp:'ム',t:30,maxPts:4,
+ note:'含「ム」的字：去、矢、公、弘、台、允、私…',
+ ans:['去','矢','公','弘','台','允','私'],
+ desc:'請寫出結構中含有「ム」的字（越多越好）'},
+{type:'component',comp:'父',t:30,maxPts:4,
+ note:'含「父」的字：爺、效、爸、交、爹…',
+ ans:['爺','效','爸','交','爹'],
+ desc:'請寫出結構中含有「父」的字（越多越好）'},
+// ── 字有發揮 ──
+{type:'position',ch:'文',pos:1,posLabel:'第二字',t:30,maxPts:1,
+ note:'含「文」於第二字：望文生義、一文不值、圖文並茂…',
+ ans:['望文生義','一文不值','圖文並茂'],
+ desc:'寫出「文」在第二個位置的四字成語'},
+{type:'position',ch:'深',pos:2,posLabel:'第三字',t:30,maxPts:1,
+ note:'含「深」於第三字：庭院深深、根深柢固…',
+ ans:['庭院深深','根深柢固'],
+ desc:'寫出「深」在第三個位置的四字成語'},
+{type:'position',ch:'本',pos:1,posLabel:'第二字',t:30,maxPts:1,
+ note:'含「本」於第二字：追本溯源、舍本逐末…',
+ ans:['追本溯源','舍本逐末'],
+ desc:'寫出「本」在第二個位置的四字成語'},
+{type:'position',ch:'正',pos:1,posLabel:'第二字',t:30,maxPts:1,
+ note:'含「正」於第二字：名正言順、心正氣和…',
+ ans:['名正言順','心正氣和'],
+ desc:'寫出「正」在第二個位置的四字成語'},
+// ── 一字雲宇宙 ──
+{type:'online',display:'運籌帷幄',correct:null,t:15,maxPts:1,
+ note:'全部正確！「運籌帷幄」四字都對',ans:['全部正確'],
+ desc:'判斷詞語是否有錯別字，點選錯誤的字（若全對請點「全部正確」）'},
+{type:'online',display:'蓬頭垢面',wrong:'篷頭垢面',wrongChar:'篷',correct:'蓬',t:15,maxPts:1,
+ note:'「蓬」頭垢面（蓬，不是篷）',ans:['蓬'],
+ desc:'判斷詞語是否有錯別字，點選錯誤的字'},
+{type:'online',display:'和藹可親',wrong:'和靄可親',wrongChar:'靄',correct:'藹',t:15,maxPts:1,
+ note:'和「藹」可親（藹，不是靄）',ans:['藹'],
+ desc:'判斷詞語是否有錯別字，點選錯誤的字'},
+{type:'online',display:'喋血街頭',wrong:'諜血街頭',wrongChar:'諜',correct:'喋',t:15,maxPts:1,
+ note:'「喋」血街頭（喋，不是諜）',ans:['喋'],
+ desc:'判斷詞語是否有錯別字，點選錯誤的字'},
+{type:'online',display:'嬉笑怒罵',wrong:'嘻笑怒罵',wrongChar:'嘻',correct:'嬉',t:15,maxPts:1,
+ note:'「嬉」笑怒罵（嬉，不是嘻）',ans:['嬉'],
+ desc:'判斷詞語是否有錯別字，點選錯誤的字'},
+{type:'online',display:'離經叛道',wrong:'離經判道',wrongChar:'判',correct:'叛',t:15,maxPts:1,
+ note:'離經「叛」道（叛，不是判）',ans:['叛'],
+ desc:'判斷詞語是否有錯別字，點選錯誤的字'},
+{type:'online',display:'漫山遍野',correct:null,t:15,maxPts:1,
+ note:'全部正確！「漫山遍野」四字都對',ans:['全部正確'],
+ desc:'判斷詞語是否有錯別字，點選錯誤的字（若全對請點「全部正確」）'},
+{type:'online',display:'激起漣漪',correct:null,t:15,maxPts:1,
+ note:'全部正確！「激起漣漪」四字都對',ans:['全部正確'],
+ desc:'判斷詞語是否有錯別字，點選錯誤的字（若全對請點「全部正確」）'},
+{type:'online',display:'三岔路口',correct:null,t:15,maxPts:1,
+ note:'全部正確！「三岔路口」四字都對',ans:['全部正確'],
+ desc:'判斷詞語是否有錯別字，點選錯誤的字（若全對請點「全部正確」）'},
+{type:'online',display:'亙古不變',correct:null,t:15,maxPts:1,
+ note:'全部正確！「亙古不變」四字都對',ans:['全部正確'],
+ desc:'判斷詞語是否有錯別字，點選錯誤的字（若全對請點「全部正確」）'},
+];
+
+// ═══════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════
+let S = {
+  mode:'solo',
+  players:['玩家'],
+  scores:{},
+  queue:[],
+  idx:0,
+  totalQ:10,
+  timer:null,
+  timeLeft:0,
+  strokes:[],
+  curStroke:[],
+  drawing:false,
+  penColor:'#222',
+  enabledTypes:Object.keys(TYPES),
+};
+
+// ═══════════════════════════════════════
+// SCREEN NAV
+// ═══════════════════════════════════════
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ═══════════════════════════════════════
+// SETUP
+// ═══════════════════════════════════════
+function gotoSetup(){buildPlayerInputs();show('screen-setup');}
+function buildPlayerInputs(){
+  const n=+document.getElementById('player-count').value;
+  let h='';
+  for(let i=1;i<=n;i++){
+    h+=`<div class="player-input-row">
+      <div class="field-label">玩家 ${i}</div>
+      <input class="field-input" id="pname-${i}" value="玩家 ${i}">
+    </div>`;
+  }
+  document.getElementById('player-inputs').innerHTML=h;
+}
+
+function gotoSettings(){
+  const list=document.getElementById('type-list');
+  list.innerHTML='';
+  Object.entries(TYPES).forEach(([k,v])=>{
+    const on=S.enabledTypes.includes(k);
+    list.innerHTML+=`<div class="toggle-row" onclick="toggleType('${k}')">
+      <div class="toggle ${on?'on':''}" id="tog-${k}"></div>
+      <span>${v}</span>
+    </div>`;
+  });
+  show('screen-settings');
+}
+function toggleType(k){
+  const idx=S.enabledTypes.indexOf(k);
+  const el=document.getElementById('tog-'+k);
+  if(idx>=0){S.enabledTypes.splice(idx,1);el.classList.remove('on');}
+  else{S.enabledTypes.push(k);el.classList.add('on');}
+}
+
+// ═══════════════════════════════════════
+// GAME START
+// ═══════════════════════════════════════
+function startSolo(){
+  S.mode='solo';S.players=['玩家'];S.scores={'玩家':0};S.totalQ=10;
+  buildQueue();launch();
+}
+function startMulti(){
+  const n=+document.getElementById('player-count').value;
+  S.mode='multi';S.players=[];S.scores={};
+  for(let i=1;i<=n;i++){
+    const nm=document.getElementById('pname-'+i).value||'玩家'+i;
+    S.players.push(nm);S.scores[nm]=0;
+  }
+  S.totalQ=+document.getElementById('q-count').value;
+  buildQueue();launch();
+}
+function buildQueue(){
+  const pool=QS.filter(q=>S.enabledTypes.includes(q.type));
+  const sh=[...pool].sort(()=>Math.random()-.5);
+  S.queue=sh.slice(0,Math.min(S.totalQ,sh.length));
+  S.idx=0;
+}
+function launch(){
+  show('screen-game');
+  initCanvas();
+  showQ();
+}
+
+// ═══════════════════════════════════════
+// QUESTION RENDER
+// ═══════════════════════════════════════
+function showQ(){
+  const q=S.queue[S.idx];
+  if(!q){return showScore();}
+  clearCanvas();
+  document.getElementById('q-counter').textContent=`題目 ${S.idx+1}/${S.queue.length}`;
+  document.getElementById('solo-score').textContent=
+    S.mode==='solo'?`${S.scores['玩家']} 分`:'';
+  document.getElementById('q-display').innerHTML=renderQ(q);
+  startTimer(q.t);
+}
+
+function renderQ(q){
+  const badge=TYPES[q.type]||q.type;
+  let h=`<div><span class="type-badge">${badge}</span></div>`;
+  if(q.type==='pronunciation'||q.type==='radical'||q.type==='strokes'){
+    h+=`<div class="big-char">${q.ch}</div>
+        <div class="hint-text">${q.hint}</div>
+        <div class="desc-text" style="margin-top:10px;">${q.desc}</div>`;
+  } else if(q.type==='combine'){
+    h+=`<div class="desc-text">${q.desc}</div>
+        <div class="components-row">
+          ${q.components.map((c,i)=>
+            `<span class="comp-chip">${c}</span>${i<q.components.length-1?'<span class="op-text">＋</span>':''}`
+          ).join('')}
+          <span class="op-text" style="color:var(--accent);">＝ ？？</span>
+        </div>`;
+  } else if(q.type==='idiom'){
+    const cells=q.cells.map((ch,i)=>{
+      const vis=q.shown.includes(i);
+      return `<div class="idiom-cell ${vis?'cell-show':'cell-hide'}">${vis?ch:'？'}</div>`;
+    }).join('');
+    h+=`<div class="desc-text">${q.desc}</div>
+        <div class="idiom-grid">${cells}</div>`;
+  } else if(q.type==='compound'){
+    h+=`<div class="desc-text">${q.desc}</div>
+        <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px;">
+          ${q.hints.map(idiom=>{
+            const first=idiom[0];
+            const rest='□'.repeat(idiom.length-1);
+            return `<div style="display:flex;align-items:center;gap:6px;">
+              <span style="background:var(--purple);padding:6px 12px;border-radius:8px;
+                font-size:1.3rem;font-weight:700;">${first}</span>
+              ${Array.from({length:idiom.length-1}).map(()=>
+                `<span style="background:rgba(255,255,255,.08);border:1px dashed rgba(255,255,255,.25);
+                  width:36px;height:36px;border-radius:6px;display:inline-flex;
+                  align-items:center;justify-content:center;font-size:1rem;color:rgba(255,255,255,.3);">□</span>`
+              ).join('')}
+            </div>`;
+          }).join('')}
+        </div>`;
+  } else if(q.type==='pearl'){
+    h+=`<div class="desc-text">${q.desc}</div>
+        <div class="pearl-row">
+          <span class="pearl-answer-slot">？</span>
+          ${q.hints.map(c=>`<span class="pearl-chip">${c}</span>`).join('')}
+        </div>`;
+  } else if(q.type==='wrongchar'){
+    const sent=q.sentence.replace(/「([^」]*)」/g,
+      (_,c)=>`「<span class="wrong-hl">${c}</span>」`);
+    h+=`<div class="desc-text">${q.desc}</div>
+        <div class="sentence">${sent}</div>`;
+  } else if(q.type==='component'){
+    h+=`<div class="desc-text">${q.desc}</div>
+        <div style="text-align:center;margin-top:12px;">
+          <span style="font-size:4rem;color:var(--accent);background:rgba(255,255,255,.1);
+            padding:10px 28px;border-radius:10px;">${q.comp}</span>
+        </div>`;
+  } else if(q.type==='position'){
+    const boxes=[0,1,2,3].map(i=>{
+      const t=i===q.pos;
+      return `<div class="pos-box ${t?'pos-target':'pos-empty'}">${t?q.ch:'□'}</div>`;
+    }).join('');
+    h+=`<div class="desc-text">${q.desc}（${q.ch} 在${q.posLabel}）</div>
+        <div class="position-row">${boxes}</div>`;
+  } else if(q.type==='dual'){
+    h+=`<div class="desc-text">${q.desc}</div>
+        <div class="dual-col">
+          ${q.components.map(c=>`<div class="dual-box">${c}</div>`).join(
+            '<div style="color:rgba(255,255,255,.4);font-size:.85rem;">＋</div>'
+          )}
+        </div>`;
+  } else if(q.type==='online'){
+    const phrase=(q.wrong||q.display).split('');
+    const btns=phrase.map((c,i)=>
+      `<button class="choice-btn" onclick="pickOnline(this,${i})">${c}</button>`
+    ).join('');
+    h+=`<div class="desc-text">${q.desc}</div>
+        <div class="choice-row">${btns}</div>
+        <button class="choice-all-ok" onclick="pickOnline(this,-1)">全部正確 ✓</button>`;
+  }
+  return h;
+}
+function pickOnline(el,i){
+  document.querySelectorAll('.choice-btn,.choice-all-ok').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+// ═══════════════════════════════════════
+// TIMER
+// ═══════════════════════════════════════
+function startTimer(s){
+  clearInterval(S.timer);
+  S.timeLeft=s;
+  const ring=document.getElementById('timer-ring');
+  const num=document.getElementById('timer-num');
+  const circ=176;
+  function tick(){
+    const r=S.timeLeft/s;
+    ring.style.strokeDashoffset=circ*(1-r);
+    ring.style.stroke=S.timeLeft<=5?'var(--red)':S.timeLeft<=10?'var(--orange)':'var(--accent)';
+    num.textContent=S.timeLeft;
+    num.style.color=S.timeLeft<=5?'var(--red)':S.timeLeft<=10?'var(--orange)':'var(--text)';
+  }
+  tick();
+  S.timer=setInterval(()=>{
+    S.timeLeft--;tick();
+    if(S.timeLeft<=0){clearInterval(S.timer);setTimeout(doReveal,400);}
+  },1000);
+}
+function skipQ(){clearInterval(S.timer);doReveal();}
+
+// ═══════════════════════════════════════
+// CANVAS
+// ═══════════════════════════════════════
+function initCanvas(){
+  const cv=document.getElementById('drawing-canvas');
+  const dpr=window.devicePixelRatio||1;
+
+  function resize(){
+    // 讓 CSS flex 先決定尺寸，再讀實際寬高同步 canvas 解析度
+    const r=cv.getBoundingClientRect();
+    if(r.width===0||r.height===0)return;
+    cv.width=Math.round(r.width*dpr);
+    cv.height=Math.round(r.height*dpr);
+    setupCtx();redraw();
+  }
+
+  // 用 ResizeObserver 監聽 canvas 本身尺寸變化
+  if(!window._cvObs){window._cvObs=new ResizeObserver(()=>resize());}
+  window._cvObs.disconnect();
+  window._cvObs.observe(cv);
+  // 也監聽 orientationchange（手機旋轉）
+  window.addEventListener('orientationchange',()=>setTimeout(resize,300));
+  resize();
+}
+function setupCtx(){
+  const cv=document.getElementById('drawing-canvas');
+  const ctx=cv.getContext('2d');
+  const dpr=window.devicePixelRatio||1;
+  ctx.scale(dpr,dpr);
+  ctx.strokeStyle=S.penColor;
+  ctx.lineWidth=4;ctx.lineCap='round';ctx.lineJoin='round';
+}
+function getPos(e){
+  const cv=document.getElementById('drawing-canvas');
+  const r=cv.getBoundingClientRect();
+  const src=e.touches?e.touches[0]:e;
+  return{x:src.clientX-r.left,y:src.clientY-r.top};
+}
+function startDraw(e){
+  e.preventDefault();S.drawing=true;
+  const p=getPos(e);S.curStroke=[p];
+  const ctx=document.getElementById('drawing-canvas').getContext('2d');
+  ctx.strokeStyle=S.penColor;ctx.lineWidth=4;ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.beginPath();ctx.moveTo(p.x,p.y);
+}
+function moveDraw(e){
+  if(!S.drawing)return;e.preventDefault();
+  const p=getPos(e);S.curStroke.push(p);
+  const ctx=document.getElementById('drawing-canvas').getContext('2d');
+  ctx.lineTo(p.x,p.y);ctx.stroke();
+}
+function endDraw(e){
+  if(!S.drawing)return;e.preventDefault();
+  S.drawing=false;
+  if(S.curStroke.length)S.strokes.push({pts:[...S.curStroke],color:S.penColor});
+  S.curStroke=[];
+}
+function clearCanvas(){
+  S.strokes=[];S.curStroke=[];
+  const cv=document.getElementById('drawing-canvas');
+  if(!cv)return;
+  cv.getContext('2d').clearRect(0,0,cv.width,cv.height);
+}
+function undoStroke(){S.strokes.pop();redraw();}
+function redraw(){
+  const cv=document.getElementById('drawing-canvas');
+  if(!cv)return;
+  const ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,cv.width,cv.height);
+  S.strokes.forEach(s=>{
+    if(s.pts.length<2)return;
+    ctx.strokeStyle=s.color;ctx.lineWidth=4;ctx.lineCap='round';ctx.lineJoin='round';
+    ctx.beginPath();ctx.moveTo(s.pts[0].x,s.pts[0].y);
+    s.pts.slice(1).forEach(p=>ctx.lineTo(p.x,p.y));
+    ctx.stroke();
+  });
+}
+function setPen(color,el){
+  S.penColor=color;
+  document.querySelectorAll('.pen-dot').forEach(d=>d.classList.remove('active'));
+  el.classList.add('active');
+}
+// Bind canvas events after DOM ready
+document.addEventListener('DOMContentLoaded',()=>{
+  const cv=document.getElementById('drawing-canvas');
+  cv.addEventListener('mousedown',startDraw);
+  cv.addEventListener('mousemove',moveDraw);
+  cv.addEventListener('mouseup',endDraw);
+  cv.addEventListener('mouseleave',endDraw);
+  cv.addEventListener('touchstart',startDraw,{passive:false});
+  cv.addEventListener('touchmove',moveDraw,{passive:false});
+  cv.addEventListener('touchend',endDraw,{passive:false});
+});
+
+// ═══════════════════════════════════════
+// ANSWER REVEAL
+// ═══════════════════════════════════════
+
+// 本題每位玩家已計的分數（允許重選）
+let _qScored = {}; // { player: pts_currently_applied }
+
+function doReveal(){
+  clearInterval(S.timer);
+  _qScored = {};
+
+  const q=S.queue[S.idx];
+  const disp=document.getElementById('ans-display');
+  const note=(q.note||'').replace(/\n/g,'<br>');
+  const chips=q.ans.map(a=>`<span class="ans-chip">${a}</span>`).join('');
+  disp.innerHTML=`
+    <div style="font-size:.8rem;color:rgba(255,255,255,.45);margin-bottom:6px;">${TYPES[q.type]}</div>
+    <div class="ans-note">${note}</div>
+    <div class="ans-chips">${chips}</div>`;
+
+  const sec=document.getElementById('player-scoring');
+  sec.innerHTML='';
+
+  if(S.mode==='solo'){
+    sec.innerHTML=`
+      <div style="text-align:center;margin-bottom:14px;">
+        <div style="font-size:.85rem;color:rgba(255,255,255,.5);margin-bottom:4px;">目前分數</div>
+        <div id="solo-score-display" style="font-size:2.4rem;font-weight:900;color:var(--accent);">${S.scores['玩家']} 分</div>
+        <div id="solo-feedback" style="min-height:1.8rem;font-size:1.1rem;font-weight:700;margin-top:4px;"></div>
+      </div>
+      <div class="scoring-label">你答對了嗎？${q.maxPts>1?'（最多 '+q.maxPts+' 分）':''}</div>
+      ${buildScoring('玩家',q.maxPts)}`;
+  } else {
+    S.players.forEach(p=>{
+      sec.innerHTML+=`
+        <div class="player-score-row" style="flex-wrap:wrap;gap:6px;">
+          <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+            <span class="psr-name" style="min-width:0;overflow:hidden;text-overflow:ellipsis;">${p}</span>
+            <span id="pscore-${esc(p)}" style="font-size:1.2rem;font-weight:900;color:var(--accent);white-space:nowrap;">${S.scores[p]} 分</span>
+            <span id="pfeed-${esc(p)}" style="font-size:.95rem;font-weight:700;min-width:2.5rem;"></span>
+          </div>
+          <div id="scoring-${esc(p)}">${buildScoring(p,q.maxPts)}</div>
+        </div>`;
+    });
+  }
+  show('screen-answer');
+}
+
+function esc(s){return s.replace(/[^a-zA-Z0-9一-鿿]/g,'_');}
+
+function buildScoring(player,max){
+  if(max===1){
+    return `<div class="psr-btns">
+      <button class="score-btn sbtn-ok" id="btn-ok-${esc(player)}"
+        onclick="applyScore('${player}',1)">✓ 答對 +1</button>
+      <button class="score-btn sbtn-no" id="btn-no-${esc(player)}"
+        onclick="applyScore('${player}',0)">✗ 答錯</button>
+    </div>`;
+  }
+  const btns=Array.from({length:max+1},(_,i)=>
+    `<button class="partial-btn" id="pb-${esc(player)}-${i}"
+       onclick="applyScore('${player}',${i})">${i}</button>`
+  ).join('');
+  return `<div>
+    <div style="font-size:.75rem;color:rgba(255,255,255,.4);margin-bottom:4px;">得幾分？</div>
+    <div class="partial-row">${btns}</div>
+  </div>`;
+}
+
+function applyScore(p,pts){
+  // 若已計過分，先扣回
+  if(_qScored[p]!==undefined){
+    S.scores[p]-=_qScored[p];
+  }
+  // 加新分
+  S.scores[p]+=pts;
+  _qScored[p]=pts;
+
+  // 更新分數顯示
+  if(S.mode==='solo'){
+    const el=document.getElementById('solo-score-display');
+    if(el) el.textContent=S.scores[p]+' 分';
+    const fb=document.getElementById('solo-feedback');
+    if(fb){
+      fb.textContent=pts>0?`＋${pts} 分 🎉`:'本題 0 分';
+      fb.style.color=pts>0?'var(--green)':'rgba(255,255,255,.4)';
+    }
+  } else {
+    const el=document.getElementById('pscore-'+esc(p));
+    if(el) el.textContent=S.scores[p]+' 分';
+    const fb=document.getElementById('pfeed-'+esc(p));
+    if(fb){
+      fb.textContent=pts>0?`+${pts}✓`:'✗';
+      fb.style.color=pts>0?'var(--green)':'var(--red)';
+    }
+  }
+
+  // 更新按鈕視覺（max=1 的 ✓/✗）
+  const max=S.queue[S.idx].maxPts;
+  if(max===1){
+    const ok=document.getElementById('btn-ok-'+esc(p));
+    const no=document.getElementById('btn-no-'+esc(p));
+    if(ok) ok.style.opacity=pts===1?'1':'0.35';
+    if(no) no.style.opacity=pts===0?'1':'0.35';
+  } else {
+    // 多分題：highlight 選中的
+    for(let i=0;i<=max;i++){
+      const b=document.getElementById(`pb-${esc(p)}-${i}`);
+      if(b) b.classList.toggle('active',i===pts);
+    }
+  }
+}
+
+function nextQ(){
+  S.idx++;
+  if(S.idx>=S.queue.length){showScore();}
+  else{show('screen-game');showQ();}
+}
+
+// ═══════════════════════════════════════
+// FINAL SCORE
+// ═══════════════════════════════════════
+function showScore(){
+  const lb=document.getElementById('leaderboard');
+  const sorted=[...S.players].sort((a,b)=>S.scores[b]-S.scores[a]);
+  const medals=['🥇','🥈','🥉'];
+  lb.innerHTML=sorted.map((p,i)=>`
+    <div class="lb-item">
+      <div class="lb-rank">${medals[i]||i+1}</div>
+      <div class="lb-name">${p}</div>
+      <div class="lb-pts">${S.scores[p]} 分</div>
+    </div>`).join('');
+  show('screen-score');
+}
+function restartGame(){
+  S.players.forEach(p=>{S.scores[p]=0;});
+  buildQueue();show('screen-game');showQ();
+}
+
+// init
+buildPlayerInputs();
+show('screen-home');
+</script>
+</body>
+</html>
