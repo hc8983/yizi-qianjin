@@ -705,7 +705,6 @@ function renderQ(q){
   let h=`<div><span class="type-badge">${badge}</span></div>`;
   if(q.type==='pronunciation'||q.type==='radical'||q.type==='strokes'){
     h+=`<div class="big-char">${q.ch}</div>
-        <div class="hint-text">${q.hint}</div>
         <div class="desc-text" style="margin-top:10px;">${q.desc}</div>`;
   } else if(q.type==='combine'){
     h+=`<div class="desc-text">${q.desc}</div>
