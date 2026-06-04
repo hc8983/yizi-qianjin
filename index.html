@@ -904,12 +904,28 @@ function doReveal(){
 
   const q=S.queue[S.idx];
   const disp=document.getElementById('ans-display');
-  const note=(q.note||'').replace(/\n/g,'<br>');
-  const chips=q.ans.map(a=>`<span class="ans-chip">${a}</span>`).join('');
-  disp.innerHTML=`
-    <div style="font-size:.8rem;color:rgba(255,255,255,.45);margin-bottom:6px;">${TYPES[q.type]}</div>
-    <div class="ans-note">${note}</div>
-    <div class="ans-chips">${chips}</div>`;
+
+  let ansHtml;
+  if(q.type==='compound'){
+    // 洞築機先：每個成語獨立一大行
+    const nums=['一','二','三','四','五'];
+    ansHtml=`
+      <div style="font-size:.8rem;color:rgba(255,255,255,.45);margin-bottom:10px;">洞築機先・正確成語</div>
+      ${q.ans.map((a,i)=>`
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <span style="background:var(--purple);color:#fff;padding:4px 10px;
+            border-radius:8px;font-size:.85rem;font-weight:700;flex-shrink:0;">第${nums[i]||i+1}句</span>
+          <span style="font-size:1.9rem;font-weight:900;color:var(--accent);letter-spacing:.05em;">${a}</span>
+        </div>`).join('')}`;
+  } else {
+    const note=(q.note||'').replace(/\n/g,'<br>');
+    const chips=q.ans.map(a=>`<span class="ans-chip">${a}</span>`).join('');
+    ansHtml=`
+      <div style="font-size:.8rem;color:rgba(255,255,255,.45);margin-bottom:6px;">${TYPES[q.type]}</div>
+      <div class="ans-note">${note}</div>
+      <div class="ans-chips">${chips}</div>`;
+  }
+  disp.innerHTML=ansHtml;
 
   const sec=document.getElementById('player-scoring');
   sec.innerHTML='';
