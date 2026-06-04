@@ -213,6 +213,15 @@ body{
 .lb-name{flex:1;font-size:1.1rem;font-weight:600;}
 .lb-pts{font-size:1.4rem;font-weight:700;color:var(--accent);}
 
+/* 眾字成詞 3×3 格 */
+.cw-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;
+  margin-top:10px;max-width:240px;margin-left:auto;margin-right:auto;}
+.cw-center{background:var(--accent);color:#1a1000;border-radius:8px;
+  aspect-ratio:1;display:flex;align-items:center;justify-content:center;
+  font-size:2rem;font-weight:900;}
+.cw-empty{background:rgba(255,255,255,.06);border:2px dashed rgba(255,255,255,.2);
+  border-radius:8px;aspect-ratio:1;}
+
 /* ── 小螢幕調整 (< 390px) ── */
 @media(max-width:390px){
   .big-char{font-size:3.8rem;}
@@ -357,6 +366,8 @@ const TYPES = {
   component:'東拼西湊',
   position:'字有發揮',
   online:'一字雲宇宙',
+  picidiom:'畫中有話',
+  centerword:'眾字成詞',
 };
 
 // maxPts: scoring buttons; 1=✓✗, 4=0~4, etc.
@@ -478,6 +489,19 @@ const QS = [
  note:'答案（每個 1 分）：憤世嫉俗、趨炎附勢',
  ans:['憤世嫉俗','趨炎附勢'],
  desc:'洞築機先・第一回合｜依圖中部件寫出成語'},
+// EP-G (6/5)
+{type:'compound',img:'images/c_g1.jpg',t:40,maxPts:2,
+ note:'答案（每個 1 分）：乳臭未乾、身先士卒',
+ ans:['乳臭未乾','身先士卒'],
+ desc:'洞築機先・第一回合｜依圖中部件寫出成語'},
+{type:'compound',img:'images/c_g2.jpg',t:40,maxPts:2,
+ note:'答案（每個 1 分）：對答如流、登堂入室',
+ ans:['對答如流','登堂入室'],
+ desc:'洞築機先・第二回合｜依圖中部件寫出成語'},
+{type:'compound',img:'images/c_g3.jpg',t:40,maxPts:3,
+ note:'答案（每個 1 分）：手忙腳亂、腳踏實地、地靈人傑',
+ ans:['手忙腳亂','腳踏實地','地靈人傑'],
+ desc:'洞築機先・第三回合｜依圖中部件寫出所有成語'},
 // ── 一字雙標 ──
 {type:'dual',components:['糹','頁'],t:40,maxPts:1,
  note:'各寫一個含「糹」和含「頁」的字\n例：經/頸、紅/項、緣/顏',
@@ -607,6 +631,29 @@ const QS = [
 {type:'online',display:'亙古不變',correct:null,t:15,maxPts:1,
  note:'全部正確！「亙古不變」四字都對',ans:['全部正確'],
  desc:'判斷詞語是否有錯別字，點選錯誤的字（若全對請點「全部正確」）'},
+// ── 畫中有話 2.0 ──
+{type:'picidiom',img:'images/p_1.jpg',t:30,maxPts:1,
+ note:'見錢眼開',ans:['見錢眼開'],
+ desc:'看圖猜成語，寫出正確的四字成語'},
+{type:'picidiom',img:'images/p_2.jpg',t:30,maxPts:1,
+ note:'若隱若現',ans:['若隱若現'],
+ desc:'看圖猜成語，寫出正確的四字成語'},
+{type:'picidiom',img:'images/p_3.jpg',t:30,maxPts:1,
+ note:'百感交集',ans:['百感交集'],
+ desc:'看圖猜成語，寫出正確的四字成語'},
+// ── 眾字成詞 ──
+{type:'centerword',ch:'貌',t:40,maxPts:4,
+ note:'含「貌」的詞（各 1 分）：面貌、全貌、禮貌、相貌、外貌、容貌、美貌、儀貌',
+ ans:['面貌','全貌','禮貌','相貌','外貌','容貌','美貌'],
+ desc:'依照題目字，寫出四個含有該字的詞語'},
+{type:'centerword',ch:'隆',t:40,maxPts:4,
+ note:'含「隆」的詞（各 1 分）：隆重、昌隆、興隆、隆盛、隆冬',
+ ans:['隆重','昌隆','興隆','隆盛','隆冬'],
+ desc:'依照題目字，寫出四個含有該字的詞語'},
+{type:'centerword',ch:'候',t:40,maxPts:4,
+ note:'含「候」的詞（各 1 分）：時候、天候、守候、等候、氣候、候選',
+ ans:['時候','天候','守候','等候','氣候','候選'],
+ desc:'依照題目字，寫出四個含有該字的詞語'},
 ];
 
 // ═══════════════════════════════════════
@@ -807,6 +854,19 @@ function renderQ(q){
             '<div style="color:rgba(255,255,255,.4);font-size:.85rem;">＋</div>'
           )}
         </div>`;
+  } else if(q.type==='picidiom'){
+    h+=`<div class="desc-text">${q.desc}</div>
+        <img src="${q.img}" alt="題目"
+          style="width:100%;border-radius:10px;margin-top:8px;display:block;"
+          loading="eager">`;
+  } else if(q.type==='centerword'){
+    // 3×3 格，中心字放中間
+    const cells=Array.from({length:9},(_,i)=>i===4
+      ?`<div class="cw-center">${q.ch}</div>`
+      :`<div class="cw-empty"></div>`
+    ).join('');
+    h+=`<div class="desc-text">${q.desc}</div>
+        <div class="cw-grid">${cells}</div>`;
   } else if(q.type==='online'){
     const phrase=(q.wrong||q.display).split('');
     const btns=phrase.map((c,i)=>
