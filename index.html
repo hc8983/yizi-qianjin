@@ -326,9 +326,14 @@ body{
 <div id="screen-score" class="screen">
   <div class="final-title">🎉 遊戲結束！</div>
   <div id="leaderboard" style="width:100%;display:flex;flex-direction:column;gap:8px;align-items:center;"></div>
+  <div id="seen-counter" style="font-size:.85rem;color:rgba(255,255,255,.4);"></div>
   <div style="width:100%;max-width:360px;display:flex;flex-direction:column;gap:10px;">
     <button class="btn btn-gold" onclick="restartGame()">再玩一次</button>
     <button class="btn btn-ghost" onclick="show('screen-home')">回主頁</button>
+    <button class="btn btn-ghost" style="font-size:.85rem;opacity:.5;"
+      onclick="if(confirm('確定要重置？之後題目會重新從頭出')){clearSeen();alert('已重置！');}">
+      🔄 重置已看過的題目
+    </button>
   </div>
 </div>
 
@@ -680,10 +685,41 @@ function startMulti(){
   S.totalQ=+document.getElementById('q-count').value;
   buildQueue();launch();
 }
+// ── 看過記錄（localStorage，跨局不重複） ──
+const SEEN_KEY='yqj_seen_v1';
+function loadSeen(){
+  try{return new Set(JSON.parse(localStorage.getItem(SEEN_KEY)||'[]'));}
+  catch{return new Set();}
+}
+function markSeen(idx){
+  const s=loadSeen();s.add(idx);
+  try{localStorage.setItem(SEEN_KEY,JSON.stringify([...s]));}catch{}
+}
+function clearSeen(){
+  try{localStorage.removeItem(SEEN_KEY);}catch{}
+}
+
 function buildQueue(){
-  const pool=QS.filter(q=>S.enabledTypes.includes(q.type));
-  const sh=[...pool].sort(()=>Math.random()-.5);
-  S.queue=sh.slice(0,Math.min(S.totalQ,sh.length));
+  const pool=QS.reduce((acc,q,i)=>{
+    if(S.enabledTypes.includes(q.type))acc.push(i);
+    return acc;
+  },[]);
+
+  const seen=loadSeen();
+  const unseen=pool.filter(i=>!seen.has(i));
+  const alreadySeen=pool.filter(i=>seen.has(i));
+
+  // 若題型已全看完，重置後從頭出
+  if(unseen.length===0){
+    clearSeen();
+    const sh=[...pool].sort(()=>Math.random()-.5);
+    S.queue=sh.slice(0,Math.min(S.totalQ,sh.length)).map(i=>QS[i]);
+  } else {
+    // 未看過的優先，打亂後不足再補看過的
+    const sh=[...unseen].sort(()=>Math.random()-.5);
+    const sh2=[...alreadySeen].sort(()=>Math.random()-.5);
+    S.queue=[...sh,...sh2].slice(0,Math.min(S.totalQ,pool.length)).map(i=>QS[i]);
+  }
   S.idx=0;
 }
 function launch(){
@@ -1044,6 +1080,11 @@ function applyScore(p,pts){
 }
 
 function nextQ(){
+  // 標記這題為已看過
+  const q=S.queue[S.idx];
+  const qIdx=QS.indexOf(q);
+  if(qIdx>=0)markSeen(qIdx);
+
   S.idx++;
   if(S.idx>=S.queue.length){showScore();}
   else{show('screen-game');showQ();}
@@ -1062,6 +1103,10 @@ function showScore(){
       <div class="lb-name">${p}</div>
       <div class="lb-pts">${S.scores[p]} 分</div>
     </div>`).join('');
+  // 顯示已看過幾題
+  const seen=loadSeen();
+  const counter=document.getElementById('seen-counter');
+  if(counter)counter.textContent=`累計已看過 ${seen.size} / ${QS.length} 題`;
   show('screen-score');
 }
 function restartGame(){
