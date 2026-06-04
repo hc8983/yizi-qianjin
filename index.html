@@ -82,7 +82,9 @@ body{
 /* 題目卡 */
 .q-card{background:var(--card);border-radius:14px;padding:14px;
   margin-bottom:8px;flex-shrink:0;
-  max-height:38dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+  max-height:38dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  transition:max-height .25s ease, padding .25s ease, margin .25s ease;}
+.q-card.collapsed{max-height:0;padding:0;margin-bottom:0;overflow:hidden;}
 .type-badge{display:inline-block;background:var(--purple);padding:4px 12px;
   border-radius:20px;font-size:.8rem;margin-bottom:8px;}
 .big-char{font-size:4.5rem;font-weight:900;color:var(--accent);text-align:center;
@@ -286,7 +288,10 @@ body{
 
   <div class="canvas-area">
     <div class="canvas-toolbar">
-      <span class="canvas-label">書寫答案</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <button class="canvas-btn" id="q-toggle-btn" onclick="toggleQCard()" title="收起/展開題目">⌃ 題目</button>
+        <span class="canvas-label">書寫答案</span>
+      </div>
       <div class="canvas-btns">
         <div class="pen-colors">
           <div class="pen-dot active" style="background:#222" onclick="setPen('#222',this)"></div>
@@ -693,6 +698,7 @@ function showQ(){
   const q=S.queue[S.idx];
   if(!q){return showScore();}
   clearCanvas();
+  expandQCard();
   document.getElementById('q-counter').textContent=`題目 ${S.idx+1}/${S.queue.length}`;
   document.getElementById('solo-score').textContent=
     S.mode==='solo'?`${S.scores['玩家']} 分`:'';
@@ -878,6 +884,18 @@ function setPen(color,el){
   S.penColor=color;
   document.querySelectorAll('.pen-dot').forEach(d=>d.classList.remove('active'));
   el.classList.add('active');
+}
+function toggleQCard(){
+  const card=document.getElementById('q-display');
+  const btn=document.getElementById('q-toggle-btn');
+  const collapsed=card.classList.toggle('collapsed');
+  btn.textContent=collapsed?'⌄ 題目':'⌃ 題目';
+}
+function expandQCard(){
+  const card=document.getElementById('q-display');
+  const btn=document.getElementById('q-toggle-btn');
+  card.classList.remove('collapsed');
+  if(btn)btn.textContent='⌃ 題目';
 }
 // Bind canvas events after DOM ready
 document.addEventListener('DOMContentLoaded',()=>{
