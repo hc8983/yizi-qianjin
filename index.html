@@ -319,7 +319,10 @@ body{
     <div class="scoring-label">各玩家計分</div>
     <div id="player-scoring"></div>
   </div>
-  <button class="btn btn-gold" onclick="nextQ()">下一題 →</button>
+  <button class="btn btn-gold" id="next-q-btn" onclick="nextQ()"
+    disabled style="opacity:.4;cursor:not-allowed;">
+    請先完成計分 ↑
+  </button>
 </div>
 
 <!-- ═══════════ SCORE ═══════════ -->
@@ -960,6 +963,10 @@ let _qScored = {}; // { player: pts_currently_applied }
 function doReveal(){
   clearInterval(S.timer);
   _qScored = {};
+  // 鎖定「下一題」，等所有人計分
+  const btn=document.getElementById('next-q-btn');
+  if(btn){btn.disabled=true;btn.style.opacity='0.4';
+    btn.style.cursor='not-allowed';btn.textContent='請先完成計分 ↑';}
 
   const q=S.queue[S.idx];
   const disp=document.getElementById('ans-display');
@@ -1035,6 +1042,16 @@ function buildScoring(player,max){
   </div>`;
 }
 
+function checkAllScored(){
+  const allDone=S.players.every(p=>_qScored[p]!==undefined);
+  const btn=document.getElementById('next-q-btn');
+  if(!btn)return;
+  btn.disabled=!allDone;
+  btn.style.opacity=allDone?'1':'0.4';
+  btn.style.cursor=allDone?'pointer':'not-allowed';
+  btn.textContent=allDone?'下一題 →':'請先完成計分 ↑';
+}
+
 function applyScore(p,pts){
   // 若已計過分，先扣回
   if(_qScored[p]!==undefined){
@@ -1077,6 +1094,9 @@ function applyScore(p,pts){
       if(b) b.classList.toggle('active',i===pts);
     }
   }
+
+  // 檢查是否所有玩家都已計分，解鎖下一題
+  checkAllScored();
 }
 
 function nextQ(){
