@@ -830,8 +830,8 @@ function renderQ(q){
     h+=`<div class="desc-text">${q.desc}</div>
         <div class="pearl-row">${pairs}</div>`;
   } else if(q.type==='wrongchar'){
-    const sent=q.sentence.replace(/「([^」]*)」/g,
-      (_,c)=>`「<span class="wrong-hl">${c}</span>」`);
+    // 直接顯示句子，不標記錯字位置
+    const sent=q.sentence.replace(/「([^」]*)」/g,'$1');
     h+=`<div class="desc-text">${q.desc}</div>
         <div class="sentence">${sent}</div>`;
   } else if(q.type==='component'){
