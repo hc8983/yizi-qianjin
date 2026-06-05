@@ -1033,16 +1033,39 @@ function doReveal(){
 
   let ansHtml;
   if(q.type==='compound'){
-    // 洞築機先：每個成語獨立一大行
+    // 洞築機先：圖片 + 每個成語獨立一大行
     const nums=['一','二','三','四','五'];
     ansHtml=`
-      <div style="font-size:.8rem;color:rgba(255,255,255,.45);margin-bottom:10px;">洞築機先・正確成語</div>
+      <div style="font-size:.8rem;color:rgba(255,255,255,.45);margin-bottom:8px;">洞築機先・正確成語</div>
+      <img src="${q.img}" alt="題目" style="width:100%;border-radius:10px;margin-bottom:12px;display:block;">
       ${q.ans.map((a,i)=>`
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
           <span style="background:var(--purple);color:#fff;padding:4px 10px;
             border-radius:8px;font-size:.85rem;font-weight:700;flex-shrink:0;">第${nums[i]||i+1}句</span>
           <span style="font-size:1.9rem;font-weight:900;color:var(--accent);letter-spacing:.05em;">${a}</span>
         </div>`).join('')}`;
+  } else if(q.type==='pearl'){
+    // 字字珠璣：答案大字 + 填入答案後的配對方塊 + 詞語列表
+    const ansChar=q.ans[0];
+    const pairs=q.hints.map((h,i)=>{
+      const before=q.hintPos&&q.hintPos[i]==='before';
+      const word=before?h+ansChar:ansChar+h;
+      return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+        <div class="pair-chip">
+          ${before
+            ?`<span class="pair-hint">${h}</span><span class="pair-ans" style="background:var(--green);color:#fff;">${ansChar}</span>`
+            :`<span class="pair-ans" style="background:var(--green);color:#fff;">${ansChar}</span><span class="pair-hint">${h}</span>`
+          }
+        </div>
+        <span style="font-size:.85rem;color:rgba(255,255,255,.6);">${word}</span>
+      </div>`;
+    }).join('');
+    ansHtml=`
+      <div style="font-size:.8rem;color:rgba(255,255,255,.45);margin-bottom:8px;">字字珠璣・正確答案</div>
+      <div style="font-size:3.5rem;font-weight:900;color:var(--accent);text-align:center;
+        margin-bottom:14px;letter-spacing:.1em;">${ansChar}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;">${pairs}</div>
+      ${q.ans.length>1?`<div style="margin-top:10px;font-size:.9rem;color:rgba(255,255,255,.5);">亦可答：${q.ans.slice(1).join('、')}</div>`:''}`;
   } else {
     const note=(q.note||'').replace(/\n/g,'<br>');
     const chips=q.ans.map(a=>`<span class="ans-chip">${a}</span>`).join('');
