@@ -157,12 +157,7 @@ body{
   padding:8px 14px;border-radius:8px;cursor:pointer;
   font-size:.9rem;font-family:inherit;min-height:40px;
   -webkit-tap-highlight-color:transparent;}
-.pen-colors{display:flex;gap:8px;margin-left:6px;}
-.pen-dot{
-  width:32px;height:32px;border-radius:50%;cursor:pointer;
-  border:3px solid transparent;transition:border .1s;
-  -webkit-tap-highlight-color:transparent;}
-.pen-dot.active{border-color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.3);}
+.canvas-btn.active{background:rgba(255,220,80,.25);border:1.5px solid rgba(255,220,80,.6);}
 #drawing-canvas{
   flex:1;min-height:120px;width:100%;
   border-radius:12px;touch-action:none;cursor:crosshair;
@@ -302,11 +297,7 @@ body{
         <span class="canvas-label">書寫答案</span>
       </div>
       <div class="canvas-btns">
-        <div class="pen-colors">
-          <div class="pen-dot active" style="background:#222" onclick="setPen('#222',this)"></div>
-          <div class="pen-dot" style="background:#c00" onclick="setPen('#c00',this)"></div>
-          <div class="pen-dot" style="background:#00c" onclick="setPen('#00c',this)"></div>
-        </div>
+        <button class="canvas-btn" id="eraser-btn" onclick="toggleEraser()" title="橡皮擦">🧹</button>
         <button class="canvas-btn" onclick="undoStroke()">↩</button>
         <button class="canvas-btn" onclick="clearCanvas()">✕</button>
       </div>
@@ -671,7 +662,7 @@ let S = {
   strokes:[],
   curStroke:[],
   drawing:false,
-  penColor:'#222',
+  eraserMode:false,
   enabledTypes:Object.keys(TYPES),
 };
 
@@ -945,11 +936,23 @@ function getPos(e){
   const src=e.touches?e.touches[0]:e;
   return{x:src.clientX-r.left,y:src.clientY-r.top};
 }
+function applyCtx(ctx){
+  if(S.eraserMode){
+    ctx.globalCompositeOperation='destination-out';
+    ctx.strokeStyle='rgba(0,0,0,1)';
+    ctx.lineWidth=28;
+  }else{
+    ctx.globalCompositeOperation='source-over';
+    ctx.strokeStyle='#222';
+    ctx.lineWidth=4;
+  }
+  ctx.lineCap='round';ctx.lineJoin='round';
+}
 function startDraw(e){
   e.preventDefault();S.drawing=true;
   const p=getPos(e);S.curStroke=[p];
   const ctx=document.getElementById('drawing-canvas').getContext('2d');
-  ctx.strokeStyle=S.penColor;ctx.lineWidth=4;ctx.lineCap='round';ctx.lineJoin='round';
+  applyCtx(ctx);
   ctx.beginPath();ctx.moveTo(p.x,p.y);
 }
 function moveDraw(e){
@@ -961,8 +964,9 @@ function moveDraw(e){
 function endDraw(e){
   if(!S.drawing)return;e.preventDefault();
   S.drawing=false;
-  if(S.curStroke.length)S.strokes.push({pts:[...S.curStroke],color:S.penColor});
+  if(S.curStroke.length)S.strokes.push({pts:[...S.curStroke],eraser:S.eraserMode});
   S.curStroke=[];
+  document.getElementById('drawing-canvas').getContext('2d').globalCompositeOperation='source-over';
 }
 function clearCanvas(){
   S.strokes=[];S.curStroke=[];
@@ -978,16 +982,26 @@ function redraw(){
   ctx.clearRect(0,0,cv.width,cv.height);
   S.strokes.forEach(s=>{
     if(s.pts.length<2)return;
-    ctx.strokeStyle=s.color;ctx.lineWidth=4;ctx.lineCap='round';ctx.lineJoin='round';
+    if(s.eraser){
+      ctx.globalCompositeOperation='destination-out';
+      ctx.strokeStyle='rgba(0,0,0,1)';ctx.lineWidth=28;
+    }else{
+      ctx.globalCompositeOperation='source-over';
+      ctx.strokeStyle='#222';ctx.lineWidth=4;
+    }
+    ctx.lineCap='round';ctx.lineJoin='round';
     ctx.beginPath();ctx.moveTo(s.pts[0].x,s.pts[0].y);
     s.pts.slice(1).forEach(p=>ctx.lineTo(p.x,p.y));
     ctx.stroke();
   });
+  ctx.globalCompositeOperation='source-over';
 }
-function setPen(color,el){
-  S.penColor=color;
-  document.querySelectorAll('.pen-dot').forEach(d=>d.classList.remove('active'));
-  el.classList.add('active');
+function toggleEraser(){
+  S.eraserMode=!S.eraserMode;
+  const btn=document.getElementById('eraser-btn');
+  const cv=document.getElementById('drawing-canvas');
+  btn.classList.toggle('active',S.eraserMode);
+  cv.style.cursor=S.eraserMode?'cell':'crosshair';
 }
 function toggleQCard(){
   const card=document.getElementById('q-display');
